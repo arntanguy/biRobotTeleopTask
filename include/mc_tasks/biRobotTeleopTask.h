@@ -23,6 +23,7 @@
 #include <eigen3/Eigen/Core>
 #include <sch/CD/CD_Pair.h>
 #include <sch/S_Object/S_Cylinder.h>
+#include <sch/S_Object/S_Point.h>
 #include <sch/S_Object/S_Sphere.h>
 #include <sch/S_Polyhedron/S_Polyhedron.h>
 
@@ -342,6 +343,29 @@ private:
     const sva::PTransformd X_0_l = robot.bodyPosW(link);
     const sva::PTransformd X_l_t = sva::PTransformd(off);
     return (sva::PTransformd(X_0_l.rotation()).inv() * X_l_t) * v_l_l;
+  }
+
+  void translateOffset(sva::PTransformd & X_translated,
+                       const sva::PTransformd & X_original,
+                       const mc_rbdyn::S_ObjectPtr translated_convex,
+                       const sva::PTransformd & X_link_translated)
+  {
+    sva::PTransformd X_0_r2pp = X_original * X_link_translated;
+    sch::S_Point projected_point;
+    projected_point.setPosition(X_0_r2pp.translation()[0], X_0_r2pp.translation()[1], X_0_r2pp.translation()[2]);
+    // do the gamma here !!!
+
+    sch::Point3 p1, p2;
+
+    sch::CD_Pair pair_r2_r2p(translated_convex.get(), &projected_point);
+    pair_r2_r2p.getClosestPoints(p1, p2);
+
+    Eigen::Vector3d robot2_point;
+    robot2_point << p1.m_x, p1.m_y, p1.m_z;
+
+    X_translated = sva::PTransformd(X_link_translated.rotation(), robot2_point) * X_link_translated.inv();
+    // std::cout << "x = " << p2.m_x - X_0_r2pp.translation()[0] << ", y = " << p2.m_y - X_0_r2pp.translation()[1] <<",
+    // z = " <<  p2.m_z - X_0_r2pp.translation()[2];
   }
 
 private:

@@ -153,50 +153,44 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
   const std::string robot_2_link_name = robot_2_pose_links_.getName(link_2_);
   const std::string robot_1_link_name = robot_1_pose_links_.getName(link_1_);
 
-  // const std::string robot_2_cvx_name = robot_2_pose_links_.getConvexName(link_2_);
-  // const std::string robot_1_cvx_name = robot_1_pose_links_.getConvexName(link_1_);
+  const std::string robot_2_cvx_name = robot_2_pose_links_.getConvexName(link_2_);
+  const auto robot_2_cvx = robot_2.convex(robot_2_cvx_name);
+  auto human_1_cvx = human_1_pose_.getConvex(link_1_, human1_);
 
-  // sch::Point3 p1, p2;
-  // pair_h1_r2.getClosestPoints(p1, p2);
-
-  // human_1_point_ << p1[0], p1[1], p1[2];
-  // robot_2_point_ << p2[0], p2[1], p2[2];
-
-  // pair_h2_r1.getClosestPoints(p1, p2);
-
-  // human_2_point_ << p1[0], p1[1], p1[2];
-  // robot_1_point_ << p2[0], p2[1], p2[2];
+  const std::string robot_1_cvx_name = robot_1_pose_links_.getConvexName(link_1_);
+  const auto robot_1_cvx = robot_1.convex(robot_1_cvx_name);
+  auto human_2_cvx = human_2_pose_.getConvex(link_2_, human2_);
 
   sva::PTransformd X_h1_h1p = sva::PTransformd::Identity();
   sva::PTransformd X_h2_h2p = sva::PTransformd::Identity();
   sva::PTransformd X_r2_r2p = sva::PTransformd::Identity();
   sva::PTransformd X_r1_r1p = sva::PTransformd::Identity();
 
+  sva::PTransformd X_0_robot2_link = robot_2_pose_links_.getOffset(link_2_) * robot_2.bodyPosW(robot_2_link_name);
+  sva::PTransformd X_0_human1_link = human_1_pose_.getOffset(link_1_) * human_1_pose_.getPose(link_1_);
+  sva::PTransformd X_0_robot1_link = robot_1_pose_links_.getOffset(link_1_) * robot_1.bodyPosW(robot_1_link_name);
+  sva::PTransformd X_0_human2_link = human_2_pose_.getOffset(link_2_) * human_2_pose_.getPose(link_2_);
+
   if(main_indx_ == 0)
   {
-    const std::string robot_2_cvx_name = robot_2_pose_links_.getConvexName(link_2_);
-    const auto robot_2_cvx = robot_2.convex(robot_2_cvx_name);
-    auto human_1_cvx = human_1_pose_.getConvex(link_1_, human1_);
-
     sch::CD_Pair pair_h1_r2(human_1_cvx.get(), robot_2_cvx.second.get());
-    getOffset(X_r2_r2p, X_h1_h1p, pair_h1_r2,
-              robot_2_pose_links_.getOffset(link_2_) * robot_2.bodyPosW(robot_2_link_name),
-              human_1_pose_.getOffset(link_1_) * human_1_pose_.getPose(link_1_));
+    getOffset(X_r2_r2p, X_h1_h1p, pair_h1_r2, X_0_robot2_link, X_0_human1_link);
     X_r1_r1p = X_h1_h1p;
     X_h2_h2p = X_r2_r2p;
+    translateOffset(X_r1_r1p, X_h1_h1p, robot_1_cvx.second, X_0_robot1_link);
+
+    translateOffset(X_h2_h2p, X_r2_r2p, human_2_cvx, X_0_human2_link);
   }
   else
   {
-    const std::string robot_1_cvx_name = robot_1_pose_links_.getConvexName(link_1_);
-    const auto robot_1_cvx = robot_1.convex(robot_1_cvx_name);
-    auto human_2_cvx = human_2_pose_.getConvex(link_2_, human2_);
-
     sch::CD_Pair pair_h2_r1(human_2_cvx.get(), robot_1_cvx.second.get());
-    getOffset(X_r1_r1p, X_h2_h2p, pair_h2_r1,
-              robot_1_pose_links_.getOffset(link_1_) * robot_1.bodyPosW(robot_1_link_name),
-              human_2_pose_.getOffset(link_2_) * human_2_pose_.getPose(link_2_));
+    getOffset(X_r1_r1p, X_h2_h2p, pair_h2_r1, X_0_robot1_link, X_0_human2_link);
     X_r2_r2p = X_h2_h2p;
     X_h1_h1p = X_r1_r1p;
+
+    translateOffset(X_r2_r2p, X_h2_h2p, robot_2_cvx.second, X_0_robot2_link);
+
+    translateOffset(X_h1_h1p, X_r1_r1p, human_1_cvx, X_0_human1_link);
   }
 
   X_r1_r1p = X_r1_r1p * robot_1_pose_links_.getOffset(link_1_);
