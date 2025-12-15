@@ -122,6 +122,8 @@ void biRobotTeleopTask::loadRobotConf(mc_solver::QPSolver & solver,
       robot_2_pose_links_.load(config("limb_map"));
     }
   }
+
+  std::cout << std::endl << "loading configuraion" << std::endl;
 }
 
 void biRobotTeleopTask::removeFromSolver(mc_solver::QPSolver & solver)
@@ -171,15 +173,30 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
   sva::PTransformd X_0_robot1_link = robot_1_pose_links_.getOffset(link_1_) * robot_1.bodyPosW(robot_1_link_name);
   sva::PTransformd X_0_human2_link = human_2_pose_.getOffset(link_2_) * human_2_pose_.getPose(link_2_);
 
+  human_1_pose_.updateLimbsLength();
+  human_2_pose_.updateLimbsLength();
+
+  robot_1_pose_links_.updateLimbsLength(robot_1);
+  robot_2_pose_links_.updateLimbsLength(robot_2);
+
+  // si length est de 0 alors ne pas la prendre en compte
+
+  // std::cout << link_1_ <<" , "<< limb2Str(link_1_) << " , length human 1 : " << human_1_pose_.getLength(link_1_) << "
+  // , length robot 1 : " << robot_1_pose_links_.getLength(link_1_)<< std::endl; std::cout << link_2_ <<" , "<<
+  // limb2Str(link_2_) << " , length human 2 : " << human_2_pose_.getLength(link_2_) << " , length robot 2 : " <<
+  // robot_2_pose_links_.getLength(link_2_)<< std::endl;
+
   if(main_indx_ == 0)
   {
     sch::CD_Pair pair_h1_r2(human_1_cvx.get(), robot_2_cvx.second.get());
     getOffset(X_r2_r2p, X_h1_h1p, pair_h1_r2, X_0_robot2_link, X_0_human1_link);
     X_r1_r1p = X_h1_h1p;
     X_h2_h2p = X_r2_r2p;
-    translateOffset(X_r1_r1p, X_h1_h1p, robot_1_cvx.second, X_0_robot1_link);
 
-    translateOffset(X_h2_h2p, X_r2_r2p, human_2_cvx, X_0_human2_link);
+    translateOffset(X_r1_r1p, X_h1_h1p, robot_1_cvx.second, X_0_robot1_link,
+                    getGamma(robot_1_pose_links_, human_1_pose_, true, link_1_));
+    translateOffset(X_h2_h2p, X_r2_r2p, human_2_cvx, X_0_human2_link,
+                    getGamma(robot_2_pose_links_, human_2_pose_, 0, link_2_));
   }
   else
   {
@@ -188,9 +205,11 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     X_r2_r2p = X_h2_h2p;
     X_h1_h1p = X_r1_r1p;
 
-    translateOffset(X_r2_r2p, X_h2_h2p, robot_2_cvx.second, X_0_robot2_link);
+    translateOffset(X_r2_r2p, X_h2_h2p, robot_2_cvx.second, X_0_robot2_link,
+                    getGamma(robot_2_pose_links_, human_2_pose_, true, link_2_));
 
-    translateOffset(X_h1_h1p, X_r1_r1p, human_1_cvx, X_0_human1_link);
+    translateOffset(X_h1_h1p, X_r1_r1p, human_1_cvx, X_0_human1_link,
+                    getGamma(robot_1_pose_links_, human_1_pose_, 0, link_1_));
   }
 
   X_r1_r1p = X_r1_r1p * robot_1_pose_links_.getOffset(link_1_);

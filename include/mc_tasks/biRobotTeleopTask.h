@@ -52,7 +52,6 @@ public:
     human_2_pose_ = biRobotTeleop::HumanPose("human_pose_2");
     robot_1_pose_links_ = biRobotTeleop::RobotPose();
     robot_2_pose_links_ = biRobotTeleop::RobotPose();
-    human_pose_links_ = biRobotTeleop::RobotPose();
   }
 
   /*! \brief Load parameters from a Configuration object */
@@ -345,14 +344,36 @@ private:
     return (sva::PTransformd(X_0_l.rotation()).inv() * X_l_t) * v_l_l;
   }
 
+  double getGamma(biRobotTeleop::RobotPose robotLinks,
+                  biRobotTeleop::HumanPose humanLinks,
+                  bool fromHumanToRobot,
+                  biRobotTeleop::Limbs link)
+  {
+    if(humanLinks.getLength(link) == 0) return 1;
+    if(fromHumanToRobot == true)
+    {
+      // std::cout << link <<" , "<< limb2Str(link)<<" , " << robotLinks.getLength(link)/humanLinks.getLength(link)  <<
+      // " fromHumanToRobot: " << fromHumanToRobot <<std::endl;
+      return robotLinks.getLength(link) / humanLinks.getLength(link);
+    }
+    // std::cout << link <<" , "<< limb2Str(link) <<" , "<< humanLinks.getLength(link)/robotLinks.getLength(link) << "
+    // fromHumanToRobot : " << fromHumanToRobot <<std::endl;
+    else
+    {
+      return humanLinks.getLength(link) / robotLinks.getLength(link);
+    }
+  }
+
   void translateOffset(sva::PTransformd & X_translated,
                        const sva::PTransformd & X_original,
                        const mc_rbdyn::S_ObjectPtr translated_convex,
-                       const sva::PTransformd & X_link_translated)
+                       const sva::PTransformd & X_link_translated,
+                       double gamma)
   {
     sva::PTransformd X_0_r2pp = X_original * X_link_translated;
     sch::S_Point projected_point;
-    projected_point.setPosition(X_0_r2pp.translation()[0], X_0_r2pp.translation()[1], X_0_r2pp.translation()[2]);
+    projected_point.setPosition(X_0_r2pp.translation()[0], X_0_r2pp.translation()[1] * gamma,
+                                X_0_r2pp.translation()[2]);
     // do the gamma here !!!
 
     sch::Point3 p1, p2;
@@ -364,8 +385,9 @@ private:
     robot2_point << p1.m_x, p1.m_y, p1.m_z;
 
     X_translated = sva::PTransformd(X_link_translated.rotation(), robot2_point) * X_link_translated.inv();
-    // std::cout << "x = " << p2.m_x - X_0_r2pp.translation()[0] << ", y = " << p2.m_y - X_0_r2pp.translation()[1] <<",
-    // z = " <<  p2.m_z - X_0_r2pp.translation()[2];
+    // std::cout << "x = " << X_original.translation()[0] - X_translated.translation()[0]
+    //           << ", y = " << X_original.translation()[1] - X_translated.translation()[1]
+    //           << ", z = " << X_original.translation()[2] - X_translated.translation()[2] << std::endl;
   }
 
 private:
@@ -392,7 +414,6 @@ private:
 
   biRobotTeleop::RobotPose robot_1_pose_links_;
   biRobotTeleop::RobotPose robot_2_pose_links_;
-  biRobotTeleop::RobotPose human_pose_links_;
   biRobotTeleop::HumanPose human_1_pose_;
   biRobotTeleop::HumanPose human_2_pose_;
   Eigen::Vector3d robot_2_point_ = Eigen::Vector3d::Zero();

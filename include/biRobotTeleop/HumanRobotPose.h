@@ -46,6 +46,8 @@ private:
   std::map<Limbs, std::string> links_;
   std::map<std::string, Limbs> limbs_;
 
+  std::map<Limbs, double> limb_length_;
+
   friend class boost::serialization::access;
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
@@ -56,6 +58,7 @@ private:
     ar & limbs_offset_;
     ar & convex_radius_;
     ar & convex_length_;
+    ar & limb_length_;
   }
 
 public:
@@ -76,6 +79,7 @@ public:
       Limbs part = static_cast<Limbs>(partInt);
       convex_length_[part] = 1;
       convex_radius_[part] = 1;
+      limb_length_[part] = 0;
       data_online_[part] = false;
       pose_.add(part, I);
       limbs_offset_.add(part, I);
@@ -161,6 +165,30 @@ public:
         new sch::S_Cylinder(sch::Point3(p1.x(), p1.y(), p1.z()), sch::Point3(p2.x(), p2.y(), p2.z()), r));
   }
 
+  void updateLimbsLength()
+  {
+
+    int arms[] = {Limbs::RightArm, Limbs::LeftArm, Limbs::RightForearm, Limbs::LeftForearm};
+    // int foreArms[] = {Limbs::RightForearm, Limbs::LeftForearm} ;
+
+    for(int armInt : arms)
+    {
+      Limbs arm = static_cast<Limbs>(armInt);
+      Limbs arm_1 = static_cast<Limbs>(armInt - 1);
+      limb_length_[arm] =
+          ((getOffset(arm_1) * getPose(arm_1)).translation() - (getOffset(arm) * getPose(arm)).translation()).norm();
+    }
+
+    // Head,
+    // Pelvis,
+    // LeftHand,
+    // LeftForearm,
+    // LeftArm,
+    // RightHand,
+    // RightForearm,
+    // RightArm
+  }
+
   mc_rbdyn::S_ObjectPtr getConvex(Limbs limb, const mc_rbdyn::Robot & robot) const
   {
     if(convex_length_.count(limb) > 0 && convex_radius_.count(limb) > 0)
@@ -244,6 +272,11 @@ public:
     return acc_.get(limb);
   }
 
+  const double & getLength(Limbs limb) const
+  {
+    return limb_length_.at(limb);
+  }
+
   /**
    * @brief Update the human pose on one limb, this data should not necesserly be in the unified frame, if so the
    * corresponding offset should be identity
@@ -313,6 +346,7 @@ private:
   std::map<Limbs, std::string> links_;
   std::map<std::string, Limbs> limbs_;
   std::map<Limbs, std::string> convex_;
+  std::map<Limbs, double> limb_length_;
 
   // transformation between the body Frame to an offsetted link body frame such as
   // when the arm are alongside the body, all the links frame orientation are matching the world frame,
@@ -349,6 +383,7 @@ public:
       links_[part] = "";
       convex_[part] = "";
       links_offsets_.add(part, I);
+      limb_length_[part] = 0;
     }
   }
 
@@ -398,6 +433,21 @@ public:
     robotName(pose.robotName());
   }
 
+  void updateLimbsLength(const mc_rbdyn::Robot & robot)
+  {
+
+    int arms[] = {Limbs::RightArm, Limbs::LeftArm, Limbs::RightForearm, Limbs::LeftForearm};
+    for(int armInt : arms)
+    {
+      Limbs arm = static_cast<Limbs>(armInt);
+      Limbs arm_1 = static_cast<Limbs>(armInt - 1);
+
+      limb_length_[arm] = ((getOffset(arm_1) * robot.bodyPosW(getName(arm_1))).translation()
+                           - (getOffset(arm) * robot.bodyPosW(getName(arm))).translation())
+                              .norm();
+    }
+  }
+
   void setNameAndConvex(const Limbs part, const mc_rtc::Configuration & config)
   {
     std::string link;
@@ -440,6 +490,11 @@ public:
     }
     std::cout << "frame not referenced" << std::endl;
     return Limbs::Head;
+  }
+
+  const double & getLength(Limbs limb) const
+  {
+    return limb_length_.at(limb);
   }
 
   const std::string getConvexName(const Limbs part) const
