@@ -122,6 +122,8 @@ void biRobotTeleopTask::loadRobotConf(mc_solver::QPSolver & solver,
       robot_2_pose_links_.load(config("limb_map"));
     }
   }
+
+  // std::cout << std::endl << "loading configuraion" << std::endl;
 }
 
 void biRobotTeleopTask::removeFromSolver(mc_solver::QPSolver & solver)
@@ -171,15 +173,39 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
   sva::PTransformd X_0_robot1_link = robot_1_pose_links_.getOffset(link_1_) * robot_1.bodyPosW(robot_1_link_name);
   sva::PTransformd X_0_human2_link = human_2_pose_.getOffset(link_2_) * human_2_pose_.getPose(link_2_);
 
+  human_1_pose_.updateLimbsLength();
+  human_2_pose_.updateLimbsLength();
+
+  robot_1_pose_links_.updateLimbsLength(robot_1);
+  robot_2_pose_links_.updateLimbsLength(robot_2);
+
+  sva::PTransformd temp = sva::PTransformd::Identity();
+
   if(main_indx_ == 0)
   {
     sch::CD_Pair pair_h1_r2(human_1_cvx.get(), robot_2_cvx.second.get());
     getOffset(X_r2_r2p, X_h1_h1p, pair_h1_r2, X_0_robot2_link, X_0_human1_link);
     X_r1_r1p = X_h1_h1p;
     X_h2_h2p = X_r2_r2p;
-    translateOffset(X_r1_r1p, X_h1_h1p, robot_1_cvx.second, X_0_robot1_link);
 
-    translateOffset(X_h2_h2p, X_r2_r2p, human_2_cvx, X_0_human2_link);
+    Eigen::Vector3d robot1_point(0, X_h1_h1p.translation()[1], 0);
+    temp = sva::PTransformd(X_0_human2_link.rotation(), robot1_point);
+
+    translateOffset(X_r1_r1p, X_h1_h1p, robot_1_cvx.second, X_0_robot1_link,
+                    getGamma(robot_1_pose_links_, human_1_pose_, true, link_1_)); // pour translate la main
+
+    Eigen::Vector3d robot2_point(X_r2_r2p.translation()[0],
+                                 X_r2_r2p.translation()[2] * getGamma(robot_2_pose_links_, human_2_pose_, 0, link_2_),
+                                 -X_r2_r2p.translation()[1]);
+    temp = sva::PTransformd(X_0_human2_link.rotation(), robot2_point);
+
+    std::cout << "gamma for link " << limb2Str(link_2_) << " "
+              << getGamma(robot_2_pose_links_, human_2_pose_, 0, link_2_) << " length after gamma "
+              << temp.translation()[1];
+
+    translateOffset(X_h2_h2p, temp, human_2_cvx, X_0_human2_link,
+                    getGamma(robot_2_pose_links_, human_2_pose_, 0, link_2_));
+    std::cout << ", length after gamma and cloestpoints " << X_h2_h2p.translation()[1] << std::endl;
   }
   else
   {
@@ -188,9 +214,21 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     X_r2_r2p = X_h2_h2p;
     X_h1_h1p = X_r1_r1p;
 
-    translateOffset(X_r2_r2p, X_h2_h2p, robot_2_cvx.second, X_0_robot2_link);
+    translateOffset(X_r2_r2p, X_h2_h2p, robot_2_cvx.second, X_0_robot2_link,
+                    getGamma(robot_2_pose_links_, human_2_pose_, true, link_2_)); // pour translate la main
 
-    translateOffset(X_h1_h1p, X_r1_r1p, human_1_cvx, X_0_human1_link);
+    Eigen::Vector3d robot1_point(X_r1_r1p.translation()[0],
+                                 -X_r1_r1p.translation()[2] * getGamma(robot_1_pose_links_, human_1_pose_, 0, link_1_),
+                                 X_r1_r1p.translation()[1]);
+    temp = sva::PTransformd(X_0_human1_link.rotation(), robot1_point);
+
+    std::cout << "link " << limb2Str(link_1_) << " " << getGamma(robot_1_pose_links_, human_1_pose_, 0, link_1_);
+    << " length after gamma " << temp.translation()[1];
+
+    translateOffset(X_h1_h1p, temp, human_1_cvx, X_0_human1_link,
+                    getGamma(robot_1_pose_links_, human_1_pose_, 0, link_1_));
+
+    std::cout << ", length after gamma and cloestpoints " << X_h1_h1p.translation()[1] << std::endl;
   }
 
   X_r1_r1p = X_r1_r1p * robot_1_pose_links_.getOffset(link_1_);
@@ -300,6 +338,49 @@ void biRobotTeleopTask::addToGUI(mc_rtc::gui::StateBuilder & gui)
                                           return robot_2_pose_links_.getOffset(link_2_)
                                                  * robots_.robot(r2Index_).bodyPosW(getLinkName(r2Index_, link_2_));
                                         }));
+
+  // gui.addElement({"Tasks", name_, "Robot pose"},
+  //                mc_rtc::gui::Transform("Robot 1: " + biRobotTeleop::limb2Str( biRobotTeleop::Limbs::LeftArm),
+  //                                       [this]()
+  //                                       {
+  //                                         return robot_1_pose_links_.getOffset( biRobotTeleop::Limbs::LeftArm)
+  //                                                * robots_.robot(r1Index_).bodyPosW(robot_1_pose_links_.getName(
+  //                                                biRobotTeleop::Limbs::LeftArm));
+  //                                       }),
+  //                mc_rtc::gui::Transform("Robot 1: " + biRobotTeleop::limb2Str( biRobotTeleop::Limbs::LeftForearm),
+  //                                       [this]()
+  //                                       {
+  //                                         return robot_1_pose_links_.getOffset( biRobotTeleop::Limbs::LeftForearm)
+  //                                                * robots_.robot(r1Index_).bodyPosW(robot_1_pose_links_.getName(
+  //                                                biRobotTeleop::Limbs::LeftForearm));
+  //                                       }),
+  //                mc_rtc::gui::Transform("Robot 1: " + biRobotTeleop::limb2Str( biRobotTeleop::Limbs::LeftHand),
+  //                                       [this]()
+  //                                       {
+  //                                         return robot_1_pose_links_.getOffset( biRobotTeleop::Limbs::LeftHand)
+  //                                                * robots_.robot(r1Index_).bodyPosW(robot_1_pose_links_.getName(
+  //                                                biRobotTeleop::Limbs::LeftHand));
+  //                                       }));
+
+  // gui.addElement({"Tasks", name_, "huamn pose"},
+  //                mc_rtc::gui::Transform("Robot 1: " + biRobotTeleop::limb2Str( biRobotTeleop::Limbs::LeftArm),
+  //                                       [this]()
+  //                                       {
+  //                                         return  human_1_pose_.getOffset(biRobotTeleop::Limbs::LeftArm) *
+  //                                         human_1_pose_.getPose(biRobotTeleop::Limbs::LeftArm) ;
+  //                                       }),
+  //                mc_rtc::gui::Transform("Robot 1: " + biRobotTeleop::limb2Str( biRobotTeleop::Limbs::LeftForearm),
+  //                                       [this]()
+  //                                       {
+  //                                         return  human_1_pose_.getOffset(biRobotTeleop::Limbs::LeftForearm) *
+  //                                         human_1_pose_.getPose(biRobotTeleop::Limbs::LeftForearm);
+  //                                       }),
+  //                mc_rtc::gui::Transform("Robot 1: " + biRobotTeleop::limb2Str( biRobotTeleop::Limbs::LeftHand),
+  //                                       [this]()
+  //                                       {
+  //                                         return human_1_pose_.getOffset(biRobotTeleop::Limbs::LeftHand) *
+  //                                         human_1_pose_.getPose(biRobotTeleop::Limbs::LeftHand) ;
+  //                                       }));
 }
 
 void biRobotTeleopTask::removeFromGUI(mc_rtc::gui::StateBuilder & gui)
