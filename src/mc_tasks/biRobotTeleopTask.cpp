@@ -222,8 +222,7 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
                                  X_r1_r1p.translation()[1]);
     temp = sva::PTransformd(X_0_human1_link.rotation(), robot1_point);
 
-    std::cout << "link " << limb2Str(link_1_) << " " << getGamma(robot_1_pose_links_, human_1_pose_, 0, link_1_);
-    << " length after gamma " << temp.translation()[1];
+    std::cout << "link " << limb2Str(link_1_) << " " << getGamma(robot_1_pose_links_, human_1_pose_, 0, link_1_) << " length after gamma " << temp.translation()[1];
 
     translateOffset(X_h1_h1p, temp, human_1_cvx, X_0_human1_link,
                     getGamma(robot_1_pose_links_, human_1_pose_, 0, link_1_));

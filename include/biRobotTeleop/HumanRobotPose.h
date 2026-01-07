@@ -458,21 +458,6 @@ public:
     }
   }
 
-  void updateLimbsLength(const mc_rbdyn::Robot & robot)
-  {
-
-    int arms[] = {Limbs::RightArm, Limbs::LeftArm, Limbs::RightForearm, Limbs::LeftForearm};
-    for(int armInt : arms)
-    {
-      Limbs arm = static_cast<Limbs>(armInt);
-      Limbs arm_1 = static_cast<Limbs>(armInt - 1);
-
-      limb_length_[arm] = ((getOffset(arm_1) * robot.bodyPosW(getName(arm_1))).translation()
-                           - (getOffset(arm) * robot.bodyPosW(getName(arm))).translation())
-                              .norm();
-    }
-  }
-
   void setNameAndConvex(const Limbs part, const mc_rtc::Configuration & config)
   {
     std::string link;
