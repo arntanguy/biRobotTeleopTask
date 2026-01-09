@@ -346,6 +346,8 @@ private:
   transformation links_offsets_;
   std::string robot_name_;
 
+  sva::PTransformd X_TargetHuman_TargetRobot_ = sva::PTransformd::Identity();
+
   void setLinksMap(const std::map<Limbs, std::string> & links_map)
   {
     links_ = links_map;
@@ -383,6 +385,28 @@ public:
       limb_length_[part] = 0;
       links_adjusted_[part] = 0;
     }
+  }
+
+  void addTransfo(const mc_rtc::Configuration & config, std::string mode)
+  {
+
+    if(mode == "SimulationSingle")
+    {
+      X_TargetHuman_TargetRobot_ = config("simu");
+    }
+    else
+    {
+      X_TargetHuman_TargetRobot_ = config("vr");
+    }
+
+    X_TargetHuman_TargetRobot_ = config("vr");
+    mc_rtc::log::info("mode is {}, transfo for robot {} is \n{}", mode, robot_name_,
+                      X_TargetHuman_TargetRobot_.rotation());
+  }
+
+  sva::PTransformd getTransfo()
+  {
+    return X_TargetHuman_TargetRobot_;
   }
 
   void load(const mc_rtc::Configuration & config)

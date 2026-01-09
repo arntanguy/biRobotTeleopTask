@@ -197,6 +197,16 @@ public:
     human_2_pose_.setCvx(human_2);
   }
 
+  void setMode(const std::string & mode)
+  {
+    mode_ = mode;
+  }
+
+  const std::string & getMode() const
+  {
+    return mode_;
+  }
+
   std::vector<biRobotTeleop::HumanPose> getHumanPose()
   {
     return {human_1_pose_, human_2_pose_};
@@ -365,10 +375,39 @@ private:
   }
 
   void translateOffset(sva::PTransformd & X_translated,
-                       const sva::PTransformd & X_original,
+                       const Eigen::Vector3d & point,
                        const mc_rbdyn::S_ObjectPtr translated_convex,
                        const sva::PTransformd & X_link_translated,
                        double gamma)
+  {
+    Eigen::Matrix3d gammaMat = Eigen::Matrix3d::Identity(3, 3);
+    gammaMat(1, 1) = gamma;
+    Eigen::Vector3d point2 = point.transpose() * gammaMat;
+
+    std::cout << " length after gamma : " << point2[1] << std::endl;
+
+    sva::PTransformd X_0_r2pp = sva::PTransformd(X_link_translated.rotation(), point2) * X_link_translated;
+    sch::S_Point projected_point;
+
+    projected_point.setPosition(X_0_r2pp.translation()[0], X_0_r2pp.translation()[1],
+                                X_0_r2pp.translation()[2]); // ds le repere monde
+
+    sch::Point3 p1, p2;
+
+    sch::CD_Pair pair_r2_r2p(translated_convex.get(), &projected_point);
+    pair_r2_r2p.getClosestPoints(p1, p2);
+
+    Eigen::Vector3d robot2_point;
+    robot2_point << p1.m_x, p1.m_y, p1.m_z;
+
+    X_translated = sva::PTransformd(X_link_translated.rotation(), robot2_point) * X_link_translated.inv();
+  }
+
+  void OldtranslateOffset(sva::PTransformd & X_translated,
+                          sva::PTransformd & X_original,
+                          const mc_rbdyn::S_ObjectPtr translated_convex,
+                          const sva::PTransformd & X_link_translated,
+                          double gamma)
   {
     sva::PTransformd X_0_r2pp = X_original * X_link_translated;
     sch::S_Point projected_point;
@@ -432,6 +471,8 @@ private:
   Eigen::VectorXd speed_;
 
   mc_rtc::gui::ArrowConfig arrowConfig_;
+
+  std::string mode_;
 };
 
 using biRobotTelopTaskPtr = std::shared_ptr<biRobotTeleopTask>;

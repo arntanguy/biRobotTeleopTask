@@ -33,7 +33,7 @@ biRobotTeleopTask::biRobotTeleopTask(const mc_solver::QPSolver & solver,
                                      double stiffness,
                                      double weight)
 : robots_(solver.robots()), r1Index_(r1Index), r2Index_(r2Index), human1_(human1), human2_(human2), link_1_(link1),
-  link_2_(link2), dt_(solver.dt()), task_(solver.robots().mbs(), r1Index, r2Index, stiffness, weight)
+  link_2_(link2), dt_(solver.dt()), task_(solver.robots().mbs(), r1Index, r2Index, stiffness, weight), mode_("")
 {
 
   eval_ = this->eval();
@@ -122,8 +122,17 @@ void biRobotTeleopTask::loadRobotConf(mc_solver::QPSolver & solver,
       robot_2_pose_links_.load(config("limb_map"));
     }
   }
-
-  // std::cout << std::endl << "loading configuraion" << std::endl;
+  if(config.has("robot_to_human_transfo"))
+  {
+    if(rIndex == r1Index_)
+    {
+      robot_1_pose_links_.addTransfo(config("robot_to_human_transfo"), getMode());
+    }
+    else if(rIndex == r2Index_)
+    {
+      robot_2_pose_links_.addTransfo(config("robot_to_human_transfo"), getMode());
+    }
+  }
 }
 
 void biRobotTeleopTask::removeFromSolver(mc_solver::QPSolver & solver)
@@ -188,24 +197,21 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     X_r1_r1p = X_h1_h1p;
     X_h2_h2p = X_r2_r2p;
 
-    Eigen::Vector3d robot1_point(0, X_h1_h1p.translation()[1], 0);
-    temp = sva::PTransformd(X_0_human2_link.rotation(), robot1_point);
+    // pour translate la main
+    // OldtranslateOffset(X_r1_r1p, X_h1_h1p, robot_1_cvx.second, X_0_robot1_link,
+    //                 getGamma(robot_1_pose_links_, human_1_pose_, true, link_1_));
 
-    translateOffset(X_r1_r1p, X_h1_h1p, robot_1_cvx.second, X_0_robot1_link,
-                    getGamma(robot_1_pose_links_, human_1_pose_, true, link_1_)); // pour translate la main
+    // temp = sva::PTransformd(X_0_human2_link.rotation(), robot2_point);
+    // X_h2_h2p = temp;
+    // OldtranslateOffset(X_h2_h2p, temp, human_2_cvx, X_0_human2_link,
+    //                 getGamma(robot_2_pose_links_, human_2_pose_, 0, link_2_));
 
-    Eigen::Vector3d robot2_point(X_r2_r2p.translation()[0],
-                                 X_r2_r2p.translation()[2] * getGamma(robot_2_pose_links_, human_2_pose_, 0, link_2_),
-                                 -X_r2_r2p.translation()[1]);
-    temp = sva::PTransformd(X_0_human2_link.rotation(), robot2_point);
+    Eigen::Vector3d robot2_point = X_r2_r2p.translation().transpose() * robot_2_pose_links_.getTransfo().rotation();
 
-    std::cout << "gamma for link " << limb2Str(link_2_) << " "
-              << getGamma(robot_2_pose_links_, human_2_pose_, 0, link_2_) << " length after gamma "
-              << temp.translation()[1];
-
-    translateOffset(X_h2_h2p, temp, human_2_cvx, X_0_human2_link,
+    translateOffset(X_h2_h2p, robot2_point, human_2_cvx, X_0_human2_link,
                     getGamma(robot_2_pose_links_, human_2_pose_, 0, link_2_));
-    std::cout << ", length after gamma and cloestpoints " << X_h2_h2p.translation()[1] << std::endl;
+
+    // std::cout << ", length after gamma and cloestpoints " << X_h2_h2p.translation()[1] << std::endl;
   }
   else
   {
@@ -214,20 +220,31 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     X_r2_r2p = X_h2_h2p;
     X_h1_h1p = X_r1_r1p;
 
-    translateOffset(X_r2_r2p, X_h2_h2p, robot_2_cvx.second, X_0_robot2_link,
-                    getGamma(robot_2_pose_links_, human_2_pose_, true, link_2_)); // pour translate la main
+    // OldtranslateOffset(X_r2_r2p, X_h2_h2p, robot_2_cvx.second, X_0_robot2_link,
+    //                 getGamma(robot_2_pose_links_, human_2_pose_, true, link_2_)); // pour translate la main
 
-    Eigen::Vector3d robot1_point(X_r1_r1p.translation()[0],
-                                 -X_r1_r1p.translation()[2] * getGamma(robot_1_pose_links_, human_1_pose_, 0, link_1_),
-                                 X_r1_r1p.translation()[1]);
-    temp = sva::PTransformd(X_0_human1_link.rotation(), robot1_point);
+    Eigen::Vector3d robot1_point = X_r1_r1p.translation().transpose() * robot_1_pose_links_.getTransfo().rotation();
 
-    std::cout << "link " << limb2Str(link_1_) << " " << getGamma(robot_1_pose_links_, human_1_pose_, 0, link_1_) << " length after gamma " << temp.translation()[1];
 
-    translateOffset(X_h1_h1p, temp, human_1_cvx, X_0_human1_link,
-                    getGamma(robot_1_pose_links_, human_1_pose_, 0, link_1_));
+    std::cout << " \n \n link " << limb2Str(link_1_) << " " << getGamma(robot_1_pose_links_, human_1_pose_, 0, link_1_)
+              << " total length of the limb " << human_1_pose_.getLength(link_1_) << " length before gamma "
+              << robot1_point[1];
+
+    translateOffset(X_h1_h1p, robot1_point, human_1_cvx, X_0_human1_link,
+                    getGamma(robot_1_pose_links_, human_1_pose_, 0, link_1_)); // problem with the closest points ??
 
     std::cout << ", length after gamma and cloestpoints " << X_h1_h1p.translation()[1] << std::endl;
+
+    // Eigen::Vector3d robot2_point(X_r1_r1p.translation()[0],
+    //                              -X_r1_r1p.translation()[2] * getGamma(robot_1_pose_links_, human_1_pose_, 0,
+    //                              link_1_), X_r1_r1p.translation()[1]);
+
+    // temp = sva::PTransformd(X_0_human1_link.rotation(), robot2_point);
+
+    // X_h1_h1p = temp;
+
+    // OldtranslateOffset(X_h1_h1p, temp, human_1_cvx, X_0_human1_link,
+    //                 getGamma(robot_1_pose_links_, human_1_pose_, 0, link_1_));
   }
 
   X_r1_r1p = X_r1_r1p * robot_1_pose_links_.getOffset(link_1_);
