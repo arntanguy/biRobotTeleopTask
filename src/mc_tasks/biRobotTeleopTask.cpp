@@ -225,15 +225,15 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
 
     Eigen::Vector3d robot1_point = X_r1_r1p.translation().transpose() * robot_1_pose_links_.getTransfo().rotation();
 
-
-    std::cout << " \n \n link " << limb2Str(link_1_) << " " << getGamma(robot_1_pose_links_, human_1_pose_, 0, link_1_)
-              << " total length of the limb " << human_1_pose_.getLength(link_1_) << " length before gamma "
-              << robot1_point[1];
+    // std::cout << " \n \n link " << limb2Str(link_1_) << " " << getGamma(robot_1_pose_links_, human_1_pose_, 0,
+    // link_1_)
+    //           << " total length of the limb " << human_1_pose_.getLength(link_1_) << " length before gamma "
+    //           << robot1_point[1];
 
     translateOffset(X_h1_h1p, robot1_point, human_1_cvx, X_0_human1_link,
                     getGamma(robot_1_pose_links_, human_1_pose_, 0, link_1_)); // problem with the closest points ??
 
-    std::cout << ", length after gamma and cloestpoints " << X_h1_h1p.translation()[1] << std::endl;
+    // std::cout << ", length after gamma and cloestpoints " << X_h1_h1p.translation()[1] << std::endl;
 
     // Eigen::Vector3d robot2_point(X_r1_r1p.translation()[0],
     //                              -X_r1_r1p.translation()[2] * getGamma(robot_1_pose_links_, human_1_pose_, 0,

@@ -29,6 +29,7 @@ struct HumanPose
 
 private:
   transformation pose_; // From the world frame to the link frame (offset is not included in this data)
+  transformation previous_pose_;
   motion vel_; // written in the body frame oriented as the world frame
   motion acc_; // written in the body frame oriented as the world frame
 
@@ -82,6 +83,7 @@ public:
       limb_length_[part] = 0;
       data_online_[part] = false;
       pose_.add(part, I);
+      previous_pose_.add(part, I);
       limbs_offset_.add(part, I);
       vel_.add(part, v);
       acc_.add(part, v);
@@ -200,6 +202,11 @@ public:
     return pose_.get(limb);
   }
 
+  const sva::PTransformd & getPreviousPose(Limbs limb) const
+  {
+    return previous_pose_.get(limb);
+  }
+
   const sva::PTransformd & getOffset(const Limbs limb) const
   {
     return limbs_offset_.get(limb);
@@ -278,6 +285,10 @@ public:
   void setPose(const Limbs limb, const sva::PTransformd & p)
   {
     pose_.add(limb, p);
+  }
+  void setPreviousPose(const Limbs limb, const sva::PTransformd & p)
+  {
+    previous_pose_.add(limb, p);
   }
 
   /**

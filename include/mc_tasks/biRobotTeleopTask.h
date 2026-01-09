@@ -384,7 +384,7 @@ private:
     gammaMat(1, 1) = gamma;
     Eigen::Vector3d point2 = point.transpose() * gammaMat;
 
-    std::cout << " length after gamma : " << point2[1] << std::endl;
+    // std::cout << " length after gamma : " << point2[1] << std::endl;
 
     sva::PTransformd X_0_r2pp = sva::PTransformd(X_link_translated.rotation(), point2) * X_link_translated;
     sch::S_Point projected_point;
