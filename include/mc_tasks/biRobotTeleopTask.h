@@ -459,6 +459,11 @@ private:
   Eigen::Vector3d robot_1_point_ = Eigen::Vector3d::Zero();
   Eigen::Vector3d human_2_point_ = Eigen::Vector3d::Zero();
 
+  sva::PTransformd X_r1_r1p_old_ = sva::PTransformd::Identity();
+  sva::PTransformd X_r2_r2p_old_ = sva::PTransformd::Identity();
+  sva::PTransformd X_h1_h1p_old_ = sva::PTransformd::Identity();
+  sva::PTransformd X_h2_h2p_old_ = sva::PTransformd::Identity();
+
   // transfo from human_1 to robot_2
   sva::PTransformd X_h1_r2_ = sva::PTransformd::Identity();
 

@@ -9,6 +9,7 @@
 #include "motion.h"
 #include "transformation.h"
 #include "type.h"
+#include <numeric>
 #include <sch/S_Object/S_Cylinder.h>
 #include <sch/S_Object/S_Sphere.h>
 
@@ -104,6 +105,17 @@ public:
   bool limbActive(const Limbs limb) const
   {
     return data_online_.at(limb);
+  }
+
+  // returns true is all trackers on the human are actove, false otherwise
+  bool humanActive() const
+  {
+    const std::size_t result =
+        std::accumulate(std::begin(data_online_), std::end(data_online_),
+                        0, // initial value of the sum
+                        [](const std::size_t previous, const auto & element) { return previous + element.second; });
+
+    return (result == 3); // if all trackers are active then pelvis, arm, and hand so 3 are active
   }
 
   void setLimbActiveState(const Limbs limb, const bool state) noexcept
@@ -204,6 +216,7 @@ public:
 
   const sva::PTransformd & getPreviousPose(Limbs limb) const
   {
+    // mc_rtc::log::info("Gettinng prvious pose for limb {}", limb);
     return previous_pose_.get(limb);
   }
 
@@ -285,10 +298,16 @@ public:
   void setPose(const Limbs limb, const sva::PTransformd & p)
   {
     pose_.add(limb, p);
+    if(humanActive())
+    {
+      setPreviousPose(limb, p);
+      // mc_rtc::log::info("I set the previous pose as well for limb {} andhuman {}", limb, name_);
+    }
   }
   void setPreviousPose(const Limbs limb, const sva::PTransformd & p)
   {
     previous_pose_.add(limb, p);
+    // mc_rtc::log::info("setting prvious pose for limb {}", limb);
   }
 
   /**
@@ -330,6 +349,7 @@ public:
     {
       Limbs limb = static_cast<Limbs>(partInt);
       setPose(limb, human.getPose(limb));
+      // setPreviousPose(limb, human.getPreviousPose(limb));
       setVel(limb, human.getVel(limb));
       setAcc(limb, human.getAcc(limb));
       setLimbActiveState(limb, human.limbActive(limb));
