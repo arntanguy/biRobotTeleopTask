@@ -82,7 +82,7 @@ public:
       convex_length_[part] = 1;
       convex_radius_[part] = 1;
       limb_length_[part] = 0;
-      data_online_[part] = false;
+      data_online_[part] = true;
       pose_.add(part, I);
       previous_pose_.add(part, I);
       limbs_offset_.add(part, I);
@@ -114,8 +114,9 @@ public:
         std::accumulate(std::begin(data_online_), std::end(data_online_),
                         0, // initial value of the sum
                         [](const std::size_t previous, const auto & element) { return previous + element.second; });
+    // std::cout << "number of active trackers for human " << name_ << " " << result <<std::endl;
 
-    return (result == 3); // if all trackers are active then pelvis, arm, and hand so 3 are active
+    return (result == 8); // if all trackers are active then pelvis, arm, and hand so 3 are active
   }
 
   void setLimbActiveState(const Limbs limb, const bool state) noexcept
@@ -307,7 +308,6 @@ public:
   void setPreviousPose(const Limbs limb, const sva::PTransformd & p)
   {
     previous_pose_.add(limb, p);
-    // mc_rtc::log::info("setting prvious pose for limb {}", limb);
   }
 
   /**
