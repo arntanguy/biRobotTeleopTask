@@ -124,6 +124,7 @@ void HumanRobotDataReceiver::checkbox(const mc_control::ElementId & id, bool s)
       {
         const auto limb = str2Limb(id.name);
         h_thread_.setLimbActiveState(limb, s);
+        // std::cout << "limb " << id.name << " is active " << s << std::endl;
       }
     }
   }

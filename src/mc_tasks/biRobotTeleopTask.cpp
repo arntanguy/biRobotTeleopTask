@@ -252,7 +252,7 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
   X_h1_h1p = X_h1_h1p * human_1_pose_.getOffset(link_1_);
   X_h2_h2p = X_h2_h2p * human_2_pose_.getOffset(link_2_);
 
-  if(!human_2_pose_.humanActive())
+  if(!human_2_pose_.humanActive() || !human_1_pose_.humanActive())
   { //! human_1_pose_.limbActive(biRobotTeleop::Limbs::Pelvis)||
     X_r1_r1p = X_r1_r1p_old_;
     X_r2_r2p = X_r2_r2p_old_;
@@ -260,16 +260,20 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     X_h2_h2p = X_h2_h2p_old_;
 
     // mc_rtc::log::info("main_indx_ {} link {} robot {} \n X_h2_h2p \n{} \n human_2_pose_b getPreviousPose \n{}\n
-    // human_2_pose_ getPose of limk 5 \n {}\n human_2_point_ {} \n",
+    // human_2_pose_ getPose  \n {}\n human_2_point_ {} \n",
     // main_indx_,link_2_,robot_2_link_name,X_h2_h2p,human_2_pose_.getPreviousPose(link_2_).translation().transpose(),
-    // human_2_pose_.getPose(link_2_).translation().transpose(), human_2_point_);
+    // human_2_pose_.getPose(link_2_).translation().transpose(), human_2_point_); mc_rtc::log::info("main_indx_ {} link
+    // {} robot {} \n X_h1_h1p \n{} \n human_1_pose_b getPreviousPose \n{}\n human_1_pose_b getPose \n{}\n
+    // human_1_point_ {} \n",
+    // main_indx_,link_1_,robot_1_link_name,X_h1_h1p,human_1_pose_.getPreviousPose(link_1_).translation().transpose(),
+    // human_1_pose_.getPose(link_1_).translation().transpose(), human_1_point_);
 
-    human_1_point_ = (X_h1_h1p * human_1_pose_.getPose(link_1_)).translation();
+    human_1_point_ = (X_h1_h1p * human_1_pose_.getPreviousPose(link_1_)).translation();
     robot_2_point_ = (X_r2_r2p * robot_2.bodyPosW(robot_2_link_name)).translation();
     human_2_point_ = (X_h2_h2p * human_2_pose_.getPreviousPose(link_2_)).translation();
     robot_1_point_ = (X_r1_r1p * robot_1.bodyPosW(robot_1_link_name)).translation();
-    // mc_rtc::log::info("one of us has inactive pelvis, 1 {}, 2 {}",
-    // !human_1_pose_.limbActive(biRobotTeleop::Limbs::Pelvis), !human_2_pose_.limbActive(biRobotTeleop::Limbs::Pelvis));
+    // mc_rtc::log::info("one of us has inactive limbs, 1 {}, 2 {}",!human_1_pose_.humanActive(),
+    // !human_2_pose_.humanActive());
   }
   else
   {
@@ -285,7 +289,12 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
 
     // mc_rtc::log::info("main_indx_{} link {} robot {}\n X_h2_h2p \n{} \n human_2_pose_ getPose link_2_) \n{}\n
     // human_2_point_ \n{}\n",
-    // main_indx_,link_2_,robot_2_link_name,X_h2_h2p,human_2_pose_.getPose(link_2_).translation(), human_2_point_);
+    // main_indx_,link_2_,robot_2_link_name,X_h2_h2p,human_2_pose_.getPose(link_2_).translation().transpose(),
+    // human_2_point_.transpose());
+    //  mc_rtc::log::info("main_indx_{} link {} robot {}\n X_h2_h1p \n{} \n human_2_pose_ getPose link_1_)
+    //  \n{}\nhuman_1_point_
+    //  \n{}\n",main_indx_,link_1_,robot_1_link_name,X_h1_h1p,human_2_pose_.getPose(link_1_).translation().transpose(),
+    //  human_1_point_.transpose());
   }
 
   // unused ?
@@ -322,7 +331,7 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
   task_.eval(eval_);
   task_.speed(speed_);
 
-  if(!human_2_pose_.humanActive())
+  if(!human_2_pose_.humanActive() || !human_1_pose_.humanActive())
   {
     task_.speed(Eigen::VectorXd::Zero(eval_.size()));
   } //! human_1_pose_.limbActive(biRobotTeleop::Limbs::Pelvis)||
