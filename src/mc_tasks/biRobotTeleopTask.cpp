@@ -198,8 +198,7 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     X_h2_h2p = X_r2_r2p;
 
     // pour translate la main
-    // OldtranslateOffset(X_r1_r1p, X_h1_h1p, robot_1_cvx.second, X_0_robot1_link,
-    //                 getGamma(robot_1_pose_links_, human_1_pose_, true, link_1_));
+    OldtranslateOffset(X_r1_r1p, X_h1_h1p, robot_1_cvx.second, X_0_robot1_link, 1);
 
     // temp = sva::PTransformd(X_0_human2_link.rotation(), robot2_point);
     // X_h2_h2p = temp;
@@ -220,8 +219,7 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     X_r2_r2p = X_h2_h2p;
     X_h1_h1p = X_r1_r1p;
 
-    // OldtranslateOffset(X_r2_r2p, X_h2_h2p, robot_2_cvx.second, X_0_robot2_link,
-    //                 getGamma(robot_2_pose_links_, human_2_pose_, true, link_2_)); // pour translate la main
+    OldtranslateOffset(X_r2_r2p, X_h2_h2p, robot_2_cvx.second, X_0_robot2_link, 1); // pour translate la main
 
     Eigen::Vector3d robot1_point = X_r1_r1p.translation().transpose() * robot_1_pose_links_.getTransfo().rotation();
 
@@ -298,8 +296,8 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
   }
 
   // unused ?
-  // X_h1_r2_ = (X_r2_r2p * robot_2.bodyPosW(robot_2_link_name)) * (X_h1_h1p * human_1_pose_.getPose(link_1_)).inv();
-  // X_r1_h2_ = (X_h2_h2p * human_2_pose_.getPose(link_2_)) * (X_r1_r1p * robot_1.bodyPosW(robot_1_link_name)).inv();
+  X_h1_r2_ = (X_r2_r2p * robot_2.bodyPosW(robot_2_link_name)) * (X_h1_h1p * human_1_pose_.getPose(link_1_)).inv();
+  X_r1_h2_ = (X_h2_h2p * human_2_pose_.getPose(link_2_)) * (X_r1_r1p * robot_1.bodyPosW(robot_1_link_name)).inv();
 
   eval_.segment(3, 3) = robot_2_point_ - human_1_point_ - (human_2_point_ - robot_1_point_);
 
