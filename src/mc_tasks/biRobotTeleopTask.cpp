@@ -342,6 +342,8 @@ void biRobotTeleopTask::addToLogger(mc_rtc::Logger & logger)
   logger.addLogEntry(name_ + "_stiffness", this, [this]() { return stiffness(); });
   logger.addLogEntry(name_ + "_speed", this, [this]() -> const Eigen::VectorXd & { return speed_; });
   logger.addLogEntry(name_ + "_weight", this, [this]() -> const double & { return weight_; });
+  logger.addLogEntry(name_ + "_dist_h1_r2_", this, [this]() { return distance(X_h1_r2_); });
+  logger.addLogEntry(name_ + "_dist_r1_h2__", this, [this]() { return distance(X_r1_h2_); });
 }
 
 void biRobotTeleopTask::addToGUI(mc_rtc::gui::StateBuilder & gui)

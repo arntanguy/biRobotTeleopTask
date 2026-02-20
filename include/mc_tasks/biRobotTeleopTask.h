@@ -127,6 +127,16 @@ public:
     return task_.speed();
   }
 
+
+  double distance(sva::PTransformd vector) 
+  {
+    return vector.translation().norm();;
+  }
+
+
+  
+
+
   void stiffness(double s)
   {
     task_.stiffness(s);
